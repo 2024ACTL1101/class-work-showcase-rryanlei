@@ -62,7 +62,7 @@ Implement the trading algorithm as per the instructions. You should initialize n
 ```r
 # Initialize columns for trade type, cost/proceeds, and accumulated shares in amd_df
 amd_df$trade_type <- NA
-amd_df$costs_proceeds <- NA  # Corrected column name
+amd_df$costs_proceeds <- 0  # Corrected column name
 amd_df$accumulated_shares <- 0  # Initialize if needed for tracking
 
 # Initialize variables for trading logic
@@ -70,8 +70,22 @@ previous_price <- 0
 share_size <- 100
 accumulated_shares <- 0
 
-for (i in 1:nrow(amd_df)) {
-# Fill your code here
+for (i in 1:nrow(amd_df)) 
+if (i==1) {
+  amd_df$trade_type[i] <- "buy"
+  amd_df$accumulated_shares[i] <- 100
+  amd_df$costs_proceeds[i] <- (-100)*amd_df$close[i]
+} else
+  if (amd_df$close[i]< amd_df$close[i-1] ) {
+    amd_df$trade_type[i] <- "buy"
+    amd_df$costs_proceeds[i] <- (-100)*amd_df$close[i]
+    amd_df$accumulated_shares[i]<- 100 + amd_df$accumulated_shares [i-1]
+  }else{
+    amd_df$accumulated_shares[i] <- amd_df$accumulated_shares[i-1]
+    
+amd_df$trade_type[1259] <- "sell"
+amd_df$costs_proceeds[1259] <-amd_df$close[1259]*amd_df$accumulated_shares[1259]
+}
 }
 ```
 
@@ -79,7 +93,7 @@ for (i in 1:nrow(amd_df)) {
 ### Step 3: Customize Trading Period
 - Define a trading period you wanted in the past five years 
 ```r
-# Fill your code here
+trading_period <- amd_df[amd_df$date >= "2019-05-20" & amd_df$date <= "2024-03-24", ] 
 ```
 
 
@@ -91,7 +105,9 @@ After running your algorithm, check if the trades were executed as expected. Cal
 - ROI Formula: $$\text{ROI} = \left( \frac{\text{Total Profit or Loss}}{\text{Total Capital Invested}} \right) \times 100$$
 
 ```r
-# Fill your code here
+total_profit_loss <- sum(amd_df$costs_proceeds)
+total_invested_capital <- total_profit_loss - amd_df$costs_proceeds[1259]
+ROI <- (total_profit_loss)/(-total_invested_capital)*100
 ```
 
 ### Step 5: Profit-Taking Strategy or Stop-Loss Mechanisum (Choose 1)
@@ -100,7 +116,60 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 
 ```r
-# Fill your code here
+share_size <- 100
+accumulated_shares <- 0
+total_costs <- 0
+stop_loss_threshold <- 0.2
+
+amd_df$trade_type <- NA
+amd_df$costs_proceeds <- NA
+
+for (i in 1:nrow(amd_df)) {
+  current_price <- amd_df$close[i]
+  
+  if (accumulated_shares ==0) {
+    # Buy shares
+   amd_df$trade_type[i] <- "buy"
+    amd_df$costs_proceeds[i] <- -current_price*share_size
+    accumulated_shares <- accumulated_shares+share_size
+    total_costs <- total_costs+current_price*share_size
+  } else if (i > 1 && current_price < amd_df$close[i-1]){
+    # Buy shares if current price is less than the precious day's price
+  amd_df$trade_type[i] <- "buy"
+    amd_df$costs_proceeds[i] <- -current_price * share_size
+    accumulated_shares <- accumulated_shares + share_size
+    total_costs <- total_costs + current_price * share_size
+  }
+ # Calculate the average purchase price
+  if (accumulated_shares >0) {
+    average_purchase_price <- total_costs /accumulated_shares
+    
+# Check for stop-loss condition
+    if (current_price <= (1-stop_loss_threshold) * accumulated_shares) {
+    
+      # Sell half of the accumulated shares
+      shares_to_sell <- accumulated_shares / 2
+      amd_df$trade_type[i] <- "sell"
+      amd_df$costs_proceeds[i] <- current_price * shares_to_sell
+      accumulated_shares <- accumulated_shares - shares_to_sell
+      total_costs <- total_costs - shares_to_sell * average_purchase_price
+    }
+  }
+  
+  # Sell all shares on the last day
+  if (i== nrow(amd_df)) {
+    amd_df$trade_type [i] <- "sell"
+    amd_df$costs_proceeds[i] <- current_price*accumulated_shares
+    accumulated_shares <- 0
+  }
+}
+# Summarize Final Performance
+total_profit_loss <- sum(amd_df$costs_proceeds, na.rm = TRUE)
+total_invested_capital_capital <- -sum(amd_df$costs_proceeds[amd_df$trade_type == "buy"], na.rm = TRUE)
+ROI <- (total_profit_loss / total_invested_capital) * 100
+
+#Print results
+cat("Total Profit/Loss:", total_profit_loss, "\n")
 ```
 
 
@@ -110,7 +179,7 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 
 ```r
-# Fill your code here and Disucss
+## [1] "On 2024-03-07 AMD experienced a significant increase in its share price, reaching a maximum value.This surge can be attributed to a major announcement regarding a breakthrough in their latest line of processors, which are set to revolutionize AI computing. Major industry players like Microsoft and Meta announced their commitment to integrating AMD's new processors into their server infrastructure, reflecting strong market confidence and future potential."
 ```
 
 Sample Discussion: On Wednesday, December 6, 2023, AMD CEO Lisa Su discussed a new graphics processor designed for AI servers, with Microsoft and Meta as committed users. The rise in AMD shares on the following Thursday suggests that investors believe in the chipmaker's upward potential and market expectations; My first strategy earned X dollars more than second strategy on this day, therefore providing a better ROI.
