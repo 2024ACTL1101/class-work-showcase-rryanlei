@@ -81,7 +81,12 @@ $$
 $$
 
 ```r
-#fill the code
+#calculate daily returns for AMD and the S&P 500
+df$AMD_Return <- (df$AMD - lag(df$AMD)) / lag(df$AMD)
+df$GSPC_Return <- (df$GSPC - lag(df$GSPC)) / lag(df$GSPC)
+
+# Remove the first row which contains NA values
+df <- na.omit(df)
 ```
 
 - **Calculate Risk-Free Rate**: Calculate the daily risk-free rate by conversion of annual risk-free Rate. This conversion accounts for the compounding effect over the days of the year and is calculated using the formula:
@@ -91,21 +96,24 @@ $$
 $$
 
 ```r
-#fill the code
+#Calculate the daily risk free rate
+df$Daily_RF <- (1 + df$RF / 100)^(1/360) - 1
 ```
 
 
 - **Calculate Excess Returns**: Compute the excess returns for AMD and the S&P 500 by subtracting the daily risk-free rate from their respective returns.
 
 ```r
-#fill the code
+#Calculate the daily risk free rate
+df$Daily_RF <- (1 + df$RF / 100)^(1/360) - 1
 ```
 
 
 - **Perform Regression Analysis**: Using linear regression, we estimate the beta (\(\beta\)) of AMD relative to the S&P 500. Here, the dependent variable is the excess return of AMD, and the independent variable is the excess return of the S&P 500. Beta measures the sensitivity of the stock's returns to fluctuations in the market.
 
 ```r
-#fill the code
+#Calculate the daily risk free rate
+df$Daily_RF <- (1 + df$RF / 100)^(1/360) - 1
 ```
 
 
@@ -113,14 +121,24 @@ $$
 
 What is your \(\beta\)? Is AMD more volatile or less volatile than the market?
 
-**Answer:**
+Since beta = 1.57 and is greater than 1, AMD is more volatile than the market.
 
 
 #### Plotting the CAPM Line
 Plot the scatter plot of AMD vs. S&P 500 excess returns and add the CAPM regression line.
 
 ```r
-#fill the code
+# Plot the CAPM line
+library(ggplot2)
+
+ggplot(df, aes(x = GSPC_Excess_Return, y = AMD_Excess_Return)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, col = "red") +
+  labs(title = "CAPM Regression: AMD vs S&P 500 Excess Returns",
+       x = "S&P 500 Excess Return",
+       y = "AMD Excess Return") +
+  theme_minimal()
+
 ```
 
 ### Step 3: Predictions Interval
@@ -131,5 +149,33 @@ Suppose the current risk-free rate is 5.0%, and the annual expected return for t
 **Answer:**
 
 ```r
-#fill the code
+# Load necessary library
+library(dplyr)
+
+# Assuming capm_model is the regression model from previous steps
+
+# Extract the residual standard error from the model summary
+residual_std_error <- summary(capm_model)$sigma
+
+# Convert daily standard error to annual standard error
+annual_std_error <- residual_std_error * sqrt(252)
+
+# Inputs
+rf_annual <- 0.05  # 5.0% annual risk-free rate
+rm_annual <- 0.133  # 13.3% annual expected market return
+beta <- summary(capm_model)$coefficients[2, 1]
+
+# Calculate expected annual return for AMD
+expected_annual_return_amd <- rf_annual + beta * (rm_annual - rf_annual)
+
+# Calculate 90% prediction interval
+z_value <- 1.645  # z-value for 90% confidence
+lower_bound <- expected_annual_return_amd - z_value * annual_std_error
+upper_bound <- expected_annual_return_amd + z_value * annual_std_error
+
+# Output the results
+list(
+  lower_bound = lower_bound*100,
+  upper_bound = upper_bound*100
+)
 ```
